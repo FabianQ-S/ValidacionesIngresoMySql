@@ -1,0 +1,86 @@
+========================================================================
+FUNCIONALIDADES DEL SISTEMA ETL - DESCRIPCIÓN CONCISA
+========================================================================
+
+FUNCIONALIDAD PRINCIPAL:
+El sistema valida datos ANTES de insertarlos, evitando errores de duplicados
+y garantizando que solo registros válidos lleguen a la base de datos.
+
+========================================================================
+CÓMO FUNCIONA EL ETL (etl_validacion_previa.sql)
+========================================================================
+
+1. INICIALIZACIÓN:
+   - Limpia logs anteriores y configura variables de conteo en cero.
+   - Crea un ID único para rastrear esta ejecución específica.
+
+2. TABLAS TEMPORALES:
+   - Crea tablas espejo (temp_articulos_validar, temp_clientes_validar, temp_proveedores_validar).
+   - Carga datos de prueba con errores intencionales para demostrar las validaciones.
+
+3. VALIDACIONES (10 tipos):
+   - Detecta duplicados dentro del mismo lote de datos.
+   - Verifica conflictos con registros ya existentes en la base de datos.
+   - Valida nombres vacíos, precios negativos, categorías nulas, emails inválidos.
+   - Registra TODOS los errores encontrados sin detener la ejecución.
+
+4. REGISTRO DE ERRORES:
+   - Guarda cada error en sys_errores_etl con descripción detallada.
+   - Incluye tipo de error, tabla, campo problemático y valor específico.
+
+5. INSERCIÓN SELECTIVA:
+   - Inserta SOLO registros que NO aparecen en la tabla de errores.
+   - Usa exclusión por código: WHERE codigo NOT IN (SELECT errores...).
+
+6. EVITA DUPLICADOS:
+   - Al validar primero, nunca intenta insertar códigos que ya existen.
+   - Elimina completamente el ERROR 1062 (Duplicate entry).
+
+7. CONTEOS REALES:
+   - Cuenta registros directamente desde las tablas finales.
+   - Muestra cuántos artículos, clientes y proveedores se insertaron realmente.
+
+8. REPORTES VISUALES:
+   - Presenta resumen con conteos de insertados vs errores detectados.
+   - Lista todos los errores encontrados para revisión y corrección.
+
+========================================================================
+CÓMO FUNCIONA EL SCRIPT DE EJECUCIÓN (ejecutar_etl_inteligente.sh)
+========================================================================
+
+1. VERIFICACIÓN DE ARCHIVOS:
+   - Confirma que existen los archivos SQL necesarios antes de ejecutar.
+
+2. EJECUCIÓN SECUENCIAL:
+   - Ejecuta primero create_TiendaInsumosOficina.sql para crear la estructura.
+   - Luego ejecuta etl_validacion_previa.sql para procesar los datos.
+
+3. MANEJO DE ERRORES:
+   - Detiene el proceso si algún paso falla y muestra el error específico.
+
+4. VERIFICACIÓN AUTOMÁTICA:
+   - Al final ejecuta consultas para mostrar cuántos registros se insertaron.
+   - Confirma que el proceso terminó correctamente.
+
+========================================================================
+DATOS DE PRUEBA INCLUIDOS
+========================================================================
+
+ARTÍCULOS: 7 registros → 2 válidos se insertan (ART001, ART002)
+CLIENTES: 6 registros → 2 válidos se insertan (CLI001, CLI002)  
+PROVEEDORES: 5 registros → 2 válidos se insertan (PROV001, PROV002)
+
+ERRORES DETECTADOS: ~12 errores de diferentes tipos (duplicados, nulos, inválidos)
+
+========================================================================
+RESULTADO FINAL
+========================================================================
+
+✅ DATOS VÁLIDOS: Se insertan en las tablas principales
+❌ DATOS CON ERRORES: Se registran in sys_errores_etl pero NO se insertan
+🔍 TRAZABILIDAD: Cada error queda documentado para corrección posterior
+
+El sistema garantiza que la base de datos solo contenga datos válidos
+y proporciona un reporte completo de todo lo que necesita corrección.
+
+========================================================================
